@@ -38,13 +38,14 @@ function FilesSection() {
 
   const getFiles = async () => {
     try {
-      fetch(Utils.BASE_URL + "/api/files", {
+      fetch("https://legal-bot-backend-beta.vercel.app/api/files", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       })
         .then((response) => response.json())
+        .then((data) => console.log(data))
         .catch((error) => console.log(error));
     } catch (error) {
       console.log(error);
