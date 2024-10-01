@@ -161,7 +161,7 @@ function ChatSection() {
                     </div>
                   )}
                   {chat.role !== "user" && (
-                    <div className="flex gap-1 items-start w-2/3">
+                    <div className="flex gap-1 items-start w-full md:w-2/3">
                       <div
                         style={{ backgroundColor: ColorUtils.secondaryColor }}
                         className="p-2 rounded-full h-min w-min"
