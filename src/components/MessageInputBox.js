@@ -1,7 +1,6 @@
 import { IoMdSend } from "react-icons/io";
 import ColorUtils from "../Utils/ColorUtils";
 import React, { useEffect, useState } from "react";
-import { ToastContainer, toast } from "react-toastify";
 import Utils from "../Utils/Utils";
 
 const MessageInputBox = (props) => {
@@ -9,20 +8,20 @@ const MessageInputBox = (props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [value, setValue] = useState("");
 
-  const notify = (message) => toast(message);
-
   const handleSearch = async (question) => {
     setIsLoading(true);
+    const chatHistory = JSON.stringify(props.chatHistory);
     try {
       const resonse = await fetch(`${Utils.BASE_URL}/api/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, chatHistory }),
       });
       const data = await resonse.json();
       console.log(data);
+      props.onResponse(data.data);
     } catch (error) {
       console.log(error);
     }
@@ -42,6 +41,7 @@ const MessageInputBox = (props) => {
     e.preventDefault();
     if (value === "") return;
     if (isLoading) return;
+    props.onSubmit(value);
     handleSearch(value);
     document.getElementById("message").value = "";
     setValue("");
@@ -75,7 +75,7 @@ const MessageInputBox = (props) => {
         Send
         {!isLoading && <IoMdSend size={20} />}
         {isLoading && (
-          <div className="w-4 h-4 border-3 border-white rounded-full animate-spin"></div>
+          <div className="w-4 h-4 border-2 border-white rounded-full animate-spin"></div>
         )}
       </button>
     </form>

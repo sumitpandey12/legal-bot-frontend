@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Container from "./components/Container";
-import { IoIosChatbubbles } from "react-icons/io";
+import { IoIosChatbubbles, IoIosCloseCircle } from "react-icons/io";
 import { TbReload } from "react-icons/tb";
-import { ToastContainer, toast } from "react-toastify";
 import { CgPinBottom } from "react-icons/cg";
-import "react-toastify/dist/ReactToastify.css";
 import { FaFilePdf } from "react-icons/fa";
 import { MdFileUpload, MdDeleteForever } from "react-icons/md";
 
@@ -15,10 +13,52 @@ import IconButton from "./components/IconButton";
 import MessageInputBox from "./components/MessageInputBox";
 
 function App() {
+  const [selectedTab, setSelectedTab] = useState(0);
+
+  const handleTabChange = (tab) => {
+    setSelectedTab(tab);
+  };
+
   return (
-    <div className="h-screen w-screen flex gap-4">
-      <FilesSection />
-      <ChatSection />
+    <div>
+      {/* Tabs for mobile view */}
+      <div className="md:hidden">
+        <div className="flex border-b border-[#2F2F2F]">
+          <button
+            style={{
+              backgroundColor:
+                selectedTab === 0
+                  ? ColorUtils.backgroundColor2
+                  : ColorUtils.secondaryColor2,
+            }}
+            className="text-white w-full p-2"
+            onClick={() => handleTabChange(0)}
+          >
+            Assistant
+          </button>
+          <button
+            style={{
+              backgroundColor:
+                selectedTab === 1
+                  ? ColorUtils.backgroundColor2
+                  : ColorUtils.secondaryColor2,
+            }}
+            className="text-white w-full p-2"
+            onClick={() => handleTabChange(1)}
+          >
+            Files
+          </button>
+        </div>
+
+        {/* Render selected tab content */}
+        {selectedTab === 0 ? <ChatSection /> : <FilesSection />}
+      </div>
+
+      {/* Two-column layout for large screens */}
+      <div className="hidden md:flex h-screen w-screen gap-4">
+        <FilesSection />
+        <ChatSection />
+      </div>
     </div>
   );
 }
@@ -27,58 +67,50 @@ function ChatSection() {
   const [chatHistory, setChatHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [loadFlag, seLoadFlag] = useState(false);
 
-  const notify = (message) => toast(message);
+  const bottomRef = useRef(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      getChatHistory();
-    }, 2000);
-    return () => clearInterval(interval);
+    if (!isLoading && chatHistory.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatHistory, isLoading]);
+
+  useEffect(() => {
+    if (!loadFlag) {
+      if (localStorage.getItem("chatHistory")) {
+        setChatHistory(JSON.parse(localStorage.getItem("chatHistory")));
+      }
+    }
+    seLoadFlag(true);
   }, []);
 
-  const getChatHistory = async () => {
-    try {
-      const resonse = await fetch(`${Utils.BASE_URL}/api/search/chatHistory`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (resonse.ok) {
-        const data = await resonse.json();
-        setChatHistory(data.data);
-      }
-    } catch (error) {
-      console.log(error);
+  useEffect(() => {
+    if (chatHistory.length > 0) {
+      localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
     }
-  };
+  }, [chatHistory]);
 
   const handleClearHistory = () => {
     setIsSpinning(true);
-
     try {
-      const resonse = fetch(`${Utils.BASE_URL}/api/search/chatHistory`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (resonse.ok) {
-        setIsSpinning(false);
-        notify("Chat history cleared");
-      }
+      localStorage.removeItem("chatHistory");
+      setChatHistory([]);
     } catch (error) {
       console.log(error);
     }
+    setTimeout(() => {
+      setIsSpinning(false);
+    }, 2000);
   };
 
   return (
     <div
       style={{ backgroundColor: ColorUtils.backgroundColor }}
-      className={`w-full md:w-3/4  p-4 flex flex-col h-screen justify-between`}
+      className={`w-full md:w-3/4 p-4 flex flex-col h-full`}
     >
-      <div className="flex flex-col">
+      <div className="flex flex-col flex-grow overflow-y-auto">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-lg md:text-xl font-bold text-white">
@@ -97,58 +129,96 @@ function ChatSection() {
           </button>
         </div>
         <Space />
-        {isLoading && (
-          <div className="flex flex-col gap-2">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div key={item}>
-                <Simmer />
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-col gap-2 overflow-y-auto flex-grow mb-12 md:mb-0">
+          {isLoading && (
+            <div className="flex flex-col gap-2">
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <div key={item}>
+                  <Simmer />
+                </div>
+              ))}
+            </div>
+          )}
 
-        {!isLoading && chatHistory.length === 0 && (
-          <div className="flex items-center justify-center mt-2">
-            <h1 className="text-white">Welcome, how can I help you?</h1>
-          </div>
-        )}
+          {!isLoading && chatHistory.length === 0 && (
+            <div className="flex items-center justify-center mt-2">
+              <h1 className="text-white">Welcome, how can I help you?</h1>
+            </div>
+          )}
 
-        {!isLoading && chatHistory.length > 0 && (
-          <div className="flex flex-col gap-2 overflow-y-auto scrollbar-hide flex-grow">
-            {chatHistory.map((chat, index) => (
-              <div className="flex flex-col gap-2" key={index}>
-                {chat.role === "user" && (
-                  <div className="self-end w-2/3 flex justify-end h-min">
-                    <h1
-                      style={{ backgroundColor: ColorUtils.secondaryColor }}
-                      className="text-white text-md md:text-lg px-4 py-2 rounded-lg"
-                    >
-                      {chat.content}
-                    </h1>
-                  </div>
-                )}
-                {chat.role !== "user" && (
-                  <div className="flex gap-1 items-start w-2/3">
-                    <div
-                      style={{ backgroundColor: ColorUtils.secondaryColor }}
-                      className="p-2 rounded-full h-min w-min"
-                    >
-                      <CgPinBottom color="white" size={20} />
+          {!isLoading && chatHistory.length > 0 && (
+            <div className="flex flex-col gap-2 overflow-y-auto scrollbar-hide flex-grow">
+              {chatHistory.map((chat, index) => (
+                <div className="flex flex-col gap-2" key={index}>
+                  {chat.role === "user" && (
+                    <div className="self-end w-2/3 flex justify-end h-min">
+                      <h1
+                        style={{ backgroundColor: ColorUtils.secondaryColor }}
+                        className="text-white text-md md:text-lg px-4 py-2 rounded-lg"
+                      >
+                        {chat.content}
+                      </h1>
                     </div>
-                    <h1 className="text-white text-md md:text-lg">
-                      {chat.content}
-                    </h1>
+                  )}
+                  {chat.role !== "user" && (
+                    <div className="flex gap-1 items-start w-2/3">
+                      <div
+                        style={{ backgroundColor: ColorUtils.secondaryColor }}
+                        className="p-2 rounded-full h-min w-min"
+                      >
+                        <CgPinBottom color="white" size={20} />
+                      </div>
+                      <h1 className="text-white text-md md:text-lg">
+                        {chat.content}
+                      </h1>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {chatHistory.length % 2 === 1 && (
+                <div className="flex gap-1 items-center">
+                  <div
+                    style={{ backgroundColor: ColorUtils.secondaryColor }}
+                    className="p-2 rounded-full h-min w-min"
+                  >
+                    <CgPinBottom color="white" size={20} />
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                  <span class="relative flex h-5 w-5">
+                    <span
+                      style={{ backgroundColor: ColorUtils.secondaryColor2 }}
+                      class={`animate-ping absolute inline-flex h-5 w-5 rounded-full bg-sky-400 opacity-75`}
+                    ></span>
+                    <span
+                      style={{ backgroundColor: ColorUtils.secondaryColor2 }}
+                      class={`relative inline-flex rounded-full h-5 w-5 bg-sky-500`}
+                    ></span>
+                  </span>
+                </div>
+              )}
+
+              <div ref={bottomRef}></div>
+            </div>
+          )}
+        </div>
       </div>
-      <ToastContainer />
-      <div className="mt-auto">
+      <div className="mt-auto fixed bottom-2 left-2 right-2 md:static md:mt-auto">
         <Space />
-        <MessageInputBox onSubmit={(message) => notify(message)} />
+        <MessageInputBox
+          chatHistory={chatHistory}
+          onSubmit={(message) => {
+            setChatHistory((prev) => [
+              ...prev,
+              { role: "user", content: message },
+            ]);
+          }}
+          onResponse={(response) => {
+            console.log(response);
+            setChatHistory((prev) => [
+              ...prev,
+              { role: "assistant", content: response.message },
+            ]);
+          }}
+        />
       </div>
     </div>
   );
@@ -159,8 +229,6 @@ function FilesSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
-  const notify = (message) => toast(message);
 
   useEffect(() => {
     getFiles();
@@ -186,7 +254,24 @@ function FilesSection() {
     setIsLoading(false);
   };
 
-  const deleteFiles = async (id) => {
+  const deleteFile = async (file) => {
+    try {
+      const resonse = await fetch(`${Utils.BASE_URL}/api/files/${file}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (resonse.ok) {
+        const data = await resonse.json();
+        getFiles();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const deleteFiles = async () => {
     setDeleteLoading(true);
     try {
       const resonse = await fetch(`${Utils.BASE_URL}/api/files`, {
@@ -197,18 +282,23 @@ function FilesSection() {
       });
       if (resonse.ok) {
         const data = await resonse.json();
-        notify(data.message);
         getFiles();
       }
     } catch (error) {
       console.log(error);
-      notify(error.message);
     }
     setDeleteLoading(false);
   };
 
   const uploadFile = async (file) => {
     setUploadLoading(true);
+
+    const existingFile = files.find((f) => f === file.name);
+    if (existingFile) {
+      setUploadLoading(false);
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -218,13 +308,11 @@ function FilesSection() {
         body: formData,
       });
       const data = await response.json();
-      notify(data.message);
       if (response.ok) {
         getFiles();
       }
     } catch (error) {
       console.log(error);
-      notify(error.message);
     }
     setUploadLoading(false);
     document.getElementById("fileInput").value = "";
@@ -240,9 +328,9 @@ function FilesSection() {
   return (
     <div
       style={{ backgroundColor: ColorUtils.backgroundColor2 }}
-      className={`w-full md:w-1/4 p-4 flex flex-col h-screen justify-between`}
+      className={`w-full md:w-1/4 p-4 flex flex-col h-[95vh] md:h-full`}
     >
-      <div className="flex flex-col">
+      <div className="flex flex-col flex-grow overflow-y-auto">
         <h1 className="text-lg md:text-xl font-bold text-white">
           Files Context
         </h1>
@@ -277,18 +365,23 @@ function FilesSection() {
         )}
 
         {!isLoading && files.length > 0 && (
-          <div className="flex flex-col gap-2 overflow-y-auto scrollbar-hide flex-grow">
+          <div className="flex flex-col gap-2 mt-2 overflow-y-auto scrollbar-hide flex-grow mb-12 md:mb-0">
             {files.map((file, index) => (
               <Container key={index}>
                 <FaFilePdf color="red" size={20} />
-                <h1 className="text-white truncate">{file.name}</h1>
+                <h1 className="text-white truncate">{file}</h1>
+                <button
+                  className={`text-white hover:text-red-600`}
+                  onClick={() => deleteFile(file)}
+                >
+                  <IoIosCloseCircle size={20} />
+                </button>
               </Container>
             ))}
           </div>
         )}
       </div>
-      <ToastContainer />
-      <div className="mt-auto">
+      <div className="mt-auto fixed bottom-2 left-2 right-2 md:static md:mt-auto">
         <Space />
         <IconButton isLoading={deleteLoading} onClick={deleteFiles}>
           <MdDeleteForever size={20} color="red" />
