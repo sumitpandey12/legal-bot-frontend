@@ -237,17 +237,19 @@ function FilesSection() {
   const getFiles = async () => {
     setIsLoading(true);
     try {
-      const resonse = await fetch(`${Utils.BASE_URL}/api/files`, {
+      fetch(`${Utils.BASE_URL}/api/files`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-      });
-      if (resonse.ok) {
-        const data = await resonse.json();
-        console.log(data);
-        setFiles(data.data);
-      }
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setFiles(data.data);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     } catch (error) {
       console.log(error);
     }
