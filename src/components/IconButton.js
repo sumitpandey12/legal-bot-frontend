@@ -1,17 +1,21 @@
 import React from "react";
 import ColorUtils from "../Utils/ColorUtils";
+import Loading from "./Loading";
 
 const IconButton = (props) => {
   return (
-    <div
-      style={{
-        backgroundColor: ColorUtils.secondaryColor,
+    <button
+      onClick={() => {
+        if (props.isLoading) {
+          return;
+        }
+        props.onClick();
       }}
-      onClick={props.onClick}
-      className={`flex gap-2 items-center px-4 py-2 text-white bg-green-600 rounded-md cursor-pointer ${props.className}`}
+      className={`w-full flex gap-2 items-center justify-center bg-[#2F2F2F] text-white p-2 rounded-md hover:bg-[#3d3d3d] ${props.className}`}
     >
+      {props.isLoading && <Loading />}
       {props.children}
-    </div>
+    </button>
   );
 };
 
