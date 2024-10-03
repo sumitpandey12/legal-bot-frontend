@@ -57,6 +57,7 @@ const MessageInputBox = (props) => {
       <input
         type="text"
         id="message"
+        value={value}
         onChange={handleInputChange}
         placeholder="Type something..."
         className="w-full p-3 bg-transparent text-white focus:outline-none"
